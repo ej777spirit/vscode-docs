@@ -1,4 +1,3 @@
----
 Order: 7
 Area: editor
 TOCTitle: AI Tools
