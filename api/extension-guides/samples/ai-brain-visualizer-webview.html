@@ -1,0 +1,672 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; img-src https: data:; connect-src https://api.example.com; style-src 'unsafe-inline'; script-src 'nonce-{{nonce}}' https://cdnjs.cloudflare.com; font-src https: data:;" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Enhanced AI Brain Visualizer Pro - Research Edition (Updated)</title>
+  <!-- Core libs -->
+  <script nonce="{{nonce}}" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script nonce="{{nonce}}" src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/9.4.4/math.min.js"></script>
+  <!-- Correct OrbitControls path (examples/js/controls) -->
+  <script nonce="{{nonce}}" src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/examples/js/controls/OrbitControls.js"></script>
+  <style>
+    :root {
+      --bg-dark: #0a192f;
+      --bg-medium: #112240;
+      --bg-light: #233554;
+      --text-light: #ccd6f6;
+      --text-medium: #8892b0;
+      --primary-accent: #64ffda;
+      --secondary-accent: #fbbf24;
+      --warning-accent: #ff6b6b;
+      --success-accent: #34d399;
+      --node-default: #64ffda;
+      --node-highlight: #ffffff;
+      --node-selected: #f5a742;
+      --node-disabled: #495670;
+      --node-cluster: #34d399;
+      --node-anomaly: #ef4444;
+      --line-default: #2a4470;
+      --line-highlight: #64ffda;
+      --line-cluster: #34d399;
+      --glass-bg: rgba(17, 34, 64, 0.7);
+      --glass-border: rgba(100, 255, 218, 0.1);
+      --shadow-medium: rgba(2, 12, 46, 0.3);
+      --user-msg-bg: #112240;
+      --ai-msg-bg: #0a192f;
+      --system-msg-bg: #1e3a5f;
+      --border-color: #233554;
+      --tooltip-bg: #0a192f;
+      --tooltip-border: #64ffda;
+    }
+    * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif }
+    body { background:var(--bg-dark); color:var(--text-light); height:100vh; overflow:hidden; display:grid; grid-template-columns:350px 1fr 350px; grid-template-rows:1fr auto; grid-template-areas: 'left middle right' 'status status status' }
+    .left-panel,.middle-panel,.right-panel{ padding:2rem; overflow-y:auto; border-right:1px solid var(--border-color) }
+    .right-panel{ border-right:none; border-left:1px solid var(--border-color) }
+    .middle-panel{ position:relative; padding:0; overflow:hidden }
+    h1,h2,h3{ color:var(--primary-accent); margin-bottom:1rem }
+    h1{ font-size:1.8rem; background:linear-gradient(90deg,var(--primary-accent),var(--secondary-accent)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; text-align:center }
+    h2{ font-size:1.4rem; display:flex; align-items:center; gap:10px }
+    h3{ font-size:1.1rem; color:var(--text-medium); margin:1.5rem 0 .8rem }
+    input,textarea,select{ width:100%; padding:12px 16px; background:var(--bg-medium); border:1px solid var(--border-color); border-radius:8px; color:var(--text-light); font-size:1rem; margin-bottom:1rem; transition:border-color .3s ease }
+    input:focus,textarea:focus,select:focus{ outline:none; border-color:var(--primary-accent); box-shadow:0 0 0 2px rgba(100,255,218,.2) }
+    textarea{ min-height:120px; resize:vertical }
+    button{ background:var(--bg-light); color:var(--text-light); border:1px solid var(--border-color); padding:12px 20px; border-radius:8px; cursor:pointer; font-weight:600; transition:all .3s ease; display:inline-flex; align-items:center; justify-content:center; gap:8px }
+    button:hover:not(:disabled){ background:var(--primary-accent); color:var(--bg-dark); border-color:var(--primary-accent); transform:translateY(-2px) }
+    button:disabled{ opacity:.5; cursor:not-allowed }
+    .action-buttons{ display:flex; flex-direction:column; gap:10px; margin-top:1.5rem }
+    .action-btn{ padding:14px 18px; width:100%; background:var(--user-msg-bg); color:var(--primary-accent); border:1px solid var(--border-color); border-radius:10px; font-weight:700; cursor:pointer; transition:all .3s ease; position:relative; overflow:hidden; font-size:.95rem; display:flex; align-items:center; justify-content:center; gap:8px }
+    .action-btn::before{ content:''; position:absolute; top:0; left:-100%; width:100%; height:100%; background:linear-gradient(90deg,transparent,rgba(255,255,255,.2),transparent); transition:.5s }
+    .action-btn:hover::before{ left:100% }
+    .action-btn.primary{ background:linear-gradient(135deg,var(--primary-accent),#3ddcba); color:var(--bg-dark); border-color:var(--primary-accent) }
+    .action-btn.secondary{ background:linear-gradient(135deg,var(--secondary-accent),#fbbf24); color:var(--bg-dark); border-color:var(--secondary-accent) }
+    .action-btn.danger{ background:linear-gradient(135deg,var(--warning-accent),#ef4444); color:#fff; border-color:var(--warning-accent) }
+    .analysis-section{ background:var(--glass-bg); backdrop-filter:blur(10px); border-radius:12px; padding:1.5rem; margin-bottom:1.5rem; border:1px solid var(--glass-border) }
+    .stats-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:1rem; margin-top:1rem }
+    .stat-item{ background:var(--bg-medium); border-radius:10px; padding:1rem; text-align:center; border:1px solid var(--border-color); transition:all .3s ease; position:relative; overflow:hidden }
+    .stat-item::after{ content:''; position:absolute; top:0; left:0; width:100%; height:3px; background:linear-gradient(90deg,var(--primary-accent),var(--secondary-accent)) }
+    .stat-item:hover{ transform:translateY(-2px); border-color:var(--primary-accent); box-shadow:0 4px 12px rgba(100,255,218,.1) }
+    .stat-value{ font-size:1.6rem; font-weight:800; color:var(--primary-accent); margin-bottom:6px; display:block }
+    .stat-label{ font-size:.8rem; color:var(--text-medium); font-weight:600; text-transform:uppercase; letter-spacing:.5px }
+    .category-breakdown{ font-size:.9rem; color:var(--text-medium); margin-top:1rem; padding:12px; background:var(--bg-dark); border-radius:8px; border:1px solid var(--border-color) }
+    .chat-container{ height:300px; overflow-y:auto; background:var(--bg-medium); border-radius:10px; padding:1rem; margin-bottom:1rem; border:1px solid var(--border-color) }
+    .message{ margin-bottom:1.2rem; padding:.8rem 1rem; border-radius:10px; line-height:1.5; animation:fadeIn .3s ease-out }
+    @keyframes fadeIn{ from{opacity:0; transform:translateY(10px)} to{opacity:1; transform:translateY(0)} }
+    .user-message{ background:var(--user-msg-bg); border-left:4px solid var(--primary-accent) }
+    .ai-message{ background:var(--ai-msg-bg); border-left:4px solid var(--secondary-accent) }
+    .system-message{ background:var(--system-msg-bg); border-left:4px solid var(--warning-accent); font-size:.9rem }
+    .message-header{ font-weight:700; margin-bottom:.4rem; display:flex; align-items:center; gap:8px }
+    .input-area{ display:flex; gap:10px }
+    #brain-canvas{ width:100%; height:100%; display:block }
+    .node-tooltip{ position:absolute; background:var(--tooltip-bg); border:2px solid var(--tooltip-border); border-radius:8px; padding:12px; max-width:300px; pointer-events:none; z-index:1000; backdrop-filter:blur(5px); box-shadow:0 8px 32px var(--shadow-medium); opacity:0; transform:translateY(10px); transition:opacity .2s ease, transform .2s ease }
+    .node-tooltip.visible{ opacity:1; transform:translateY(0) }
+    .selector-group{ display:flex; flex-wrap:wrap; gap:8px; margin-bottom:1rem }
+    .selector-btn,.model-btn,.research-tool-btn{ flex:1; min-width:120px; padding:10px 12px; background:var(--bg-medium); border:1px solid var(--border-color); border-radius:8px; color:var(--text-medium); font-size:.85rem; cursor:pointer; transition:all .3s ease; text-align:center }
+    .selector-btn:hover,.model-btn:hover,.research-tool-btn:hover{ background:var(--bg-light); color:var(--text-light); border-color:var(--primary-accent) }
+    .selector-btn.active,.model-btn.active,.research-tool-btn.active{ background:var(--primary-accent); color:var(--bg-dark); border-color:var(--primary-accent); font-weight:700 }
+    .status-indicator{ position:absolute; bottom:25px; left:25px; display:flex; align-items:center; gap:12px; background:var(--glass-bg); backdrop-filter:blur(15px); padding:12px 18px; border-radius:16px; border:1px solid var(--glass-border); z-index:5; box-shadow:0 8px 32px var(--shadow-medium) }
+    .status-dot{ width:12px; height:12px; border-radius:50%; transition:all .3s ease }
+    .status-dot.ready{ background:var(--success-accent); box-shadow:0 0 10px var(--success-accent) }
+    .status-dot.thinking{ background:var(--secondary-accent); box-shadow:0 0 10px var(--secondary-accent); animation:pulse 1.5s infinite }
+    .status-dot.processing{ background:var(--primary-accent); box-shadow:0 0 10px var(--primary-accent); animation:pulse 1.5s infinite }
+    .status-dot.error{ background:var(--warning-accent); box-shadow:0 0 10px var(--warning-accent) }
+    /* used for API status dot */
+    .status-dot.connected{ background:var(--success-accent); box-shadow:0 0 10px var(--success-accent) }
+    @keyframes pulse{ 0%{opacity:1} 50%{opacity:.4} 100%{opacity:1} }
+    .perf-stats{ position:absolute; top:25px; right:25px; background:var(--glass-bg); backdrop-filter:blur(10px); padding:12px 16px; border-radius:12px; border:1px solid var(--glass-border); font-size:.85rem; z-index:5; box-shadow:0 4px 20px var(--shadow-medium); display:none }
+    .perf-stats.visible{ display:block }
+    .loading-overlay{ position:absolute; inset:0; background:rgba(10,25,47,.9); display:flex; flex-direction:column; justify-content:center; align-items:center; z-index:100; opacity:0; pointer-events:none; transition:opacity .3s ease }
+    .loading-overlay.active{ opacity:1; pointer-events:all }
+    .loading-spinner{ width:50px; height:50px; border:5px solid rgba(100,255,218,.2); border-top:5px solid var(--primary-accent); border-radius:50%; animation:spin 1s linear infinite; margin-bottom:20px }
+    @keyframes spin{ 0%{ transform:rotate(0) } 100%{ transform:rotate(360deg) } }
+    .loading-progress{ width:300px; height:8px; background:var(--bg-medium); border-radius:4px; overflow:hidden; margin-top:10px }
+    .loading-progress-bar{ height:100%; background:linear-gradient(90deg,var(--primary-accent),var(--secondary-accent)); width:0%; transition:width .3s ease }
+    #comparisonPanel,#exportPanel,#collaborationPanel{ position:fixed; inset:0; background:rgba(10,25,47,.98); z-index:500; display:none; padding:2rem; overflow-y:auto }
+    #comparisonPanel.active,#exportPanel.active,#collaborationPanel.active{ display:block }
+    .matrix-display{ background:var(--bg-dark); padding:12px; border-radius:8px; border:1px solid var(--border-color); max-height:200px; overflow-y:auto; font-size:.8rem; font-family:monospace }
+    .matrix-row{ display:flex; gap:6px; margin-bottom:4px }
+    .matrix-cell{ flex:1; text-align:center; padding:2px 4px; background:var(--bg-light); border-radius:4px }
+    .shortcuts-help{ position:fixed; bottom:80px; left:25px; background:var(--bg-medium); border-radius:12px; padding:1.5rem; border:1px solid var(--border-color); z-index:5; box-shadow:0 8px 32px var(--shadow-medium); display:none; backdrop-filter:blur(10px); max-width:300px }
+    .shortcuts-help.visible{ display:block }
+    @media(max-width:992px){ body{ grid-template-columns:1fr; grid-template-rows:auto 1fr auto auto; grid-template-areas:'header' 'middle' 'left' 'right' 'status' } .left-panel,.middle-panel,.right-panel{ width:100%; min-width:unset; border:none } .left-panel{ padding:1.5rem; border-bottom:1px solid var(--glass-border); order:1 } .middle-panel{ height:60vh; min-height:500px; order:2 } .right-panel{ padding:1.5rem; border-top:1px solid var(--glass-border); order:3 } .controls-section{ grid-template-columns:1fr } .status-indicator,.shortcuts-help{ position:static; margin:1rem auto; width:fit-content } }
+  </style>
+</head>
+<body>
+  <!-- Left Panel: Input & Controls -->
+  <div class="left-panel">
+    <h1>🧠 AI Brain Visualizer Pro</h1>
+    <div class="analysis-section">
+      <h2>🔬 Analysis Dashboard</h2>
+      <div class="stats-grid">
+        <div class="stat-item"><span class="stat-value" id="totalNodes">0</span><span class="stat-label">Nodes</span></div>
+        <div class="stat-item"><span class="stat-value" id="clusters">0</span><span class="stat-label">Clusters</span></div>
+        <div class="stat-item"><span class="stat-value" id="anomalies">0</span><span class="stat-label">Anomalies</span></div>
+        <div class="stat-item"><span class="stat-value" id="similarity">0%</span><span class="stat-label">Similarity</span></div>
+        <div class="stat-item"><span class="stat-value" id="complexity">0.0</span><span class="stat-label">Complexity</span></div>
+        <div class="stat-item"><span class="stat-value" id="confidence">0%</span><span class="stat-label">Confidence</span></div>
+      </div>
+      <div class="category-breakdown">
+        <h3>🧮 Mathematical Metrics</h3>
+        <div class="stats-grid">
+          <div class="stat-item"><span class="stat-value" id="entropy">0.0</span><span class="stat-label">Entropy</span></div>
+          <div class="stat-item"><span class="stat-value" id="sparsity">0%</span><span class="stat-label">Sparsity</span></div>
+          <div class="stat-item"><span class="stat-value" id="norm">0.0</span><span class="stat-label">Norm</span></div>
+          <div class="stat-item"><span class="stat-value" id="rank">0</span><span class="stat-label">Rank</span></div>
+          <div class="stat-item"><span class="stat-value" id="condition">0.0</span><span class="stat-label">Condition</span></div>
+          <div class="stat-item"><span class="stat-value" id="eigenvalues">0.0</span><span class="stat-label">Eigenvalues</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="analysis-section">
+      <h2>💬 AI Interaction</h2>
+      <div class="chat-container" id="chatContainer">
+        <div class="message system-message">
+          <div class="message-header">🤖 System</div>
+          <div>Welcome to the Enhanced AI Brain Visualizer Pro! Enter a prompt to begin analysis.</div>
+        </div>
+      </div>
+      <div class="input-area">
+        <input type="text" id="userInput" placeholder="Enter your research query..." autocomplete="off" />
+        <button id="sendButton">Send 🚀</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Middle Panel: 3D Visualization -->
+  <div class="middle-panel" id="middlePanel">
+    <canvas id="brain-canvas"></canvas>
+    <div class="perf-stats" id="perfStats">
+      <div class="perf-item"><span class="perf-label">FPS:</span><span class="perf-value" id="fps">0</span></div>
+      <div class="perf-item"><span class="perf-label">Nodes:</span><span class="perf-value" id="nodeCount">0</span></div>
+      <div class="perf-item"><span class="perf-label">Draw Calls:</span><span class="perf-value" id="drawCalls">0</span></div>
+      <div class="perf-item"><span class="perf-label">Memory:</span><span class="perf-value" id="memoryUsage">0 MB</span></div>
+      <div class="perf-item"><span class="perf-label">Triangles:</span><span class="perf-value" id="triangleCount">0</span></div>
+    </div>
+    <div class="loading-overlay" id="loadingOverlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Initializing Enhanced Analysis...</div>
+      <div class="loading-progress"><div class="loading-progress-bar" id="loadingProgressBar"></div></div>
+      <div class="loading-subtext" id="loadingSubtext">Preparing cognitive framework</div>
+    </div>
+    <div class="node-tooltip" id="nodeTooltip"></div>
+    <div class="shortcuts-help" id="shortcutsHelp">
+      <div class="shortcuts-title">⌨️ Keyboard Shortcuts</div>
+      <div class="shortcut-item"><span>Space</span> <span>Re-synthesize</span></div>
+      <div class="shortcut-item"><span>R</span> <span>Reset View</span></div>
+      <div class="shortcut-item"><span>E</span> <span>Export Data</span></div>
+      <div class="shortcut-item"><span>S</span> <span>Save Session</span></div>
+      <div class="shortcut-item"><span>P</span> <span>Perf Stats</span></div>
+      <div class="shortcut-item"><span>M</span> <span>Research Mode</span></div>
+      <div class="shortcut-item"><span>C</span> <span>Collaborate</span></div>
+      <div class="shortcut-item"><span>O</span> <span>Optimize</span></div>
+      <div class="shortcut-item"><span>T</span> <span>Research Tool</span></div>
+      <div class="shortcut-item"><span>?</span> <span>Toggle Help</span></div>
+    </div>
+  </div>
+
+  <!-- Right Panel: Tools & Output -->
+  <div class="right-panel">
+    <div class="analysis-section">
+      <h2>🛠️ Research Tools</h2>
+      <div class="selector-group">
+        <button class="research-tool-btn active" data-tool="analyze">🔍 Analyze</button>
+        <button class="research-tool-btn" data-tool="synthesize">⚗️ Synthesize</button>
+        <button class="research-tool-btn" data-tool="compare">⚖️ Compare</button>
+        <button class="research-tool-btn" data-tool="predict">🔮 Predict</button>
+        <button class="research-tool-btn" data-tool="cluster">🎯 Cluster</button>
+      </div>
+      <div class="selector-group">
+        <button class="selector-btn active" data-mode="conceptual">🧠 Conceptual</button>
+        <button class="selector-btn" data-mode="mathematical">🔢 Mathematical</button>
+        <button class="selector-btn" data-mode="scientific">🧪 Scientific</button>
+      </div>
+      <div class="selector-group">
+        <button class="model-btn active" data-model="gemini">🔮 Gemini Ultra</button>
+        <button class="model-btn" data-model="gpt">🤖 GPT-4</button>
+        <button class="model-btn" data-model="claude">🧠 Claude 3</button>
+      </div>
+      <div class="action-buttons">
+        <button class="action-btn primary" id="resynthesizeBtn" disabled>🔄 Re-synthesize Analysis</button>
+        <button class="action-btn" id="explainBtn" disabled>🧐 Explain Reasoning</button>
+        <button class="action-btn" id="compareBtn" disabled>⚖️ Compare Versions</button>
+        <button class="action-btn" id="predictBtn" disabled>🔮 Predict Extensions</button>
+        <button class="action-btn" id="clusterBtn" disabled>🎯 Cluster Analysis</button>
+      </div>
+    </div>
+    <div class="analysis-section">
+      <h2>📊 Response Analysis</h2>
+      <div id="responseMeta">
+        <div class="control-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+          <div class="control-item"><div class="control-label">Model Used</div><div class="control-value" id="modelUsed">None</div></div>
+          <div class="control-item"><div class="control-label">Thought Count</div><div class="control-value" id="thoughtCount">0</div></div>
+          <div class="control-item"><div class="control-label">Processing Time</div><div class="control-value" id="processingTime">0ms</div></div>
+          <div class="control-item"><div class="control-label">Confidence</div><div class="control-value" id="confidenceText">0%</div></div>
+        </div>
+        <div class="control-section">
+          <h4>Confidence Level</h4>
+          <div class="loading-progress"><div class="loading-progress-bar" id="confidenceFill" style="width:0%"></div></div>
+        </div>
+      </div>
+      <div class="no-data" id="noResponseData">No analysis data available. Please generate a response.</div>
+      <div id="responseContent" style="display:none;"></div>
+    </div>
+    <div class="analysis-section">
+      <h2>⚙️ System Controls</h2>
+      <div class="action-buttons">
+        <button class="action-btn" id="apiConfigBtn">🔐 Configure API</button>
+        <button class="action-btn" id="saveSessionBtn" disabled>💾 Save Session</button>
+        <button class="action-btn" id="loadSessionBtn">📂 Load Session</button>
+        <button class="action-btn" id="exportBtn" disabled>📤 Export Data</button>
+        <button class="action-btn" id="collaborateBtn">👥 Collaborate</button>
+        <button class="action-btn secondary" id="optimizeBtn">⚡ Optimize Performance</button>
+        <button class="action-btn danger" id="resetBtn">🌀 Reset Visualization</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Status Bar -->
+  <div class="status-indicator">
+    <div class="status-dot ready" id="statusDot"></div>
+    <div class="status-text" id="statusText">System ready. Awaiting input.</div>
+    <div class="status-dot" id="apiStatusDot"></div>
+    <div class="status-text" id="apiStatusText">API: Not configured</div>
+  </div>
+
+  <!-- Node Control Panel -->
+  <div id="node-control" style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--bg-medium); border:2px solid var(--primary-accent); border-radius:16px; padding:2rem; width:90%; max-width:500px; z-index:200; box-shadow:0 20px 50px rgba(0,0,0,.5); display:none; backdrop-filter:blur(10px)">
+    <div class="control-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+      <h3 class="control-title" style="font-size:1.4rem; color:var(--primary-accent); margin:0;">Node Inspector</h3>
+      <button class="close-btn" id="close-node-control" style="background:none; border:none; color:var(--text-medium); font-size:1.5rem; cursor:pointer">&times;</button>
+    </div>
+    <div class="control-section">
+      <h4>Node Information</h4>
+      <div class="control-grid" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+        <div class="control-item"><div class="control-label">ID</div><div class="control-value" id="nodeId">N/A</div></div>
+        <div class="control-item"><div class="control-label">Category</div><div class="control-value" id="nodeCategory">N/A</div></div>
+        <div class="control-item"><div class="control-label">Weight</div><div class="control-value" id="nodeWeight">0%</div></div>
+        <div class="control-item"><div class="control-label">Enabled</div><div class="control-value" id="nodeEnabled">Yes</div></div>
+      </div>
+    </div>
+    <div class="control-section">
+      <h4>Mathematical Representation</h4>
+      <div class="matrix-display" id="activationMatrix"><div class="no-data">No activation data available</div></div>
+    </div>
+    <div class="control-section">
+      <h4>Weight Matrix</h4>
+      <div class="matrix-display" id="weightMatrix"><div class="no-data">No weight data available</div></div>
+    </div>
+    <div class="control-section">
+      <h4>Actions</h4>
+      <div class="selector-group">
+        <button class="selector-btn" id="randomWeight">🎲 Randomize Weight</button>
+        <button class="selector-btn" id="disableBranchBtn">🚫 Disable Branch</button>
+        <button class="selector-btn" id="enableBranchBtn">✅ Enable Branch</button>
+        <button class="selector-btn" id="isolateBranchBtn">🔒 Isolate Branch</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- API Configuration Modal -->
+  <div class="modal" id="apiConfigModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">🔐 API Configuration</h2>
+        <button class="modal-close" id="closeApiConfig">&times;</button>
+      </div>
+      <div class="error-message" id="apiErrorMessage"></div>
+      <div class="form-group">
+        <label for="apiProvider">Provider</label>
+        <select id="apiProvider">
+          <option value="google">Google AI (Gemini)</option>
+          <option value="openai">OpenAI (GPT)</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+        </select>
+      </div>
+      <div class="form-row" style="display:flex; gap:15px;">
+        <div class="form-group" style="flex:1">
+          <label for="apiKey">API Key</label>
+          <input type="password" id="apiKey" placeholder="Enter your API key" />
+        </div>
+        <div class="form-group" style="flex:1">
+          <label for="apiToken">API Token (if required)</label>
+          <input type="password" id="apiToken" placeholder="Enter your API token" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="apiEndpoint">API Endpoint</label>
+        <input type="text" id="apiEndpoint" placeholder="https://api.example.com/v1" />
+      </div>
+      <div class="form-row" style="display:flex; gap:15px;">
+        <div class="form-group" style="flex:1">
+          <label for="apiModel">Model</label>
+          <select id="apiModel">
+            <option value="gemini-ultra">gemini-ultra</option>
+            <option value="gpt-4">gpt-4</option>
+            <option value="claude-3-opus">claude-3-opus</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label for="researchMode">Research Mode</label>
+          <select id="researchMode">
+            <option value="standard">Standard</option>
+            <option value="advanced">Advanced</option>
+            <option value="experimental">Experimental</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row" style="display:flex; gap:15px;">
+        <div class="form-group" style="flex:1">
+          <label for="matrixVisualization">Matrix Visualization</label>
+          <select id="matrixVisualization">
+            <option value="none">None</option>
+            <option value="2d">2D Heatmap</option>
+            <option value="3d">3D Surface</option>
+          </select>
+        </div>
+        <div class="form-group" style="flex:1">
+          <label for="collaborationMode">Collaboration Mode</label>
+          <select id="collaborationMode">
+            <option value="solo">Solo</option>
+            <option value="shared">Shared</option>
+            <option value="realtime">Real-time</option>
+          </select>
+        </div>
+      </div>
+      <button class="action-btn primary" id="saveApiConfig">💾 Save Configuration</button>
+    </div>
+  </div>
+
+  <div id="comparisonPanel">
+    <div class="comparison-header">
+      <h2 class="comparison-title">⚖️ Response Comparison</h2>
+      <button class="comparison-close" id="comparisonClose">&times;</button>
+    </div>
+    <div class="comparison-content" id="comparisonContent" style="display:grid; grid-template-columns:1fr 1fr; gap:2rem;"></div>
+  </div>
+
+  <div id="exportPanel">
+    <div class="export-header">
+      <h2 class="export-title">📤 Export Research Data</h2>
+      <button class="export-close" id="exportPanelClose">&times;</button>
+    </div>
+    <div class="export-options" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;">
+      <div class="export-card" data-format="csv"><div class="export-icon">📊</div><div class="export-name">CSV Data</div><div class="export-desc">Export raw node and analysis data</div></div>
+      <div class="export-card" data-format="json"><div class="export-icon">📄</div><div class="export-name">JSON Data</div><div class="export-desc">Export structured session data</div></div>
+      <div class="export-card" data-format="latex"><div class="export-icon">📋</div><div class="export-name">LaTeX Report</div><div class="export-desc">Export formatted research report</div></div>
+      <div class="export-card" data-format="pdf"><div class="export-icon">🖨️</div><div class="export-name">PDF Report</div><div class="export-desc">Export printable research document</div></div>
+    </div>
+  </div>
+
+  <div id="collaborationPanel">
+    <div class="collaboration-header">
+      <h2 class="collaboration-title">👥 Collaboration Hub</h2>
+      <button class="collaboration-close" id="collaborationPanelClose">&times;</button>
+    </div>
+    <div class="collaboration-content" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:1.5rem;">
+      <div class="collaboration-card" style="text-align:center; background:var(--bg-medium); border-radius:12px; padding:1.5rem; border:1px solid var(--border-color)">
+        <div class="collaboration-icon">🔗</div>
+        <div class="collaboration-name">Share Session</div>
+        <div class="collaboration-desc">Generate a link to share this session</div>
+        <button class="action-btn" id="shareSessionBtn" style="margin-top:1rem;">🔗 Share Link</button>
+      </div>
+      <div class="collaboration-card" style="text-align:center; background:var(--bg-medium); border-radius:12px; padding:1.5rem; border:1px solid var(--border-color)">
+        <div class="collaboration-icon">✉️</div>
+        <div class="collaboration-name">Invite Collaborator</div>
+        <div class="collaboration-desc">Invite others via email or username</div>
+        <button class="action-btn" id="inviteUserBtn" style="margin-top:1rem;">✉️ Send Invite</button>
+      </div>
+    </div>
+    <div class="collaboration-users" style="margin-top:2rem;">
+      <h3>👥 Active Collaborators</h3>
+      <ul class="user-list" id="collaborationUsers" style="list-style:none;">
+        <li class="user-item" style="display:flex; align-items:center; padding:12px 16px; background:var(--bg-medium); border-radius:8px; margin-bottom:10px; border:1px solid var(--border-color)">
+          <div class="user-avatar" style="width:40px; height:40px; border-radius:50%; background:var(--primary-accent); margin-right:12px; display:flex; align-items:center; justify-content:center; font-weight:700; color:var(--bg-dark)">Y</div>
+          <div class="user-info" style="flex:1">
+            <div class="user-name" style="font-weight:700; color:var(--text-light)">You (Owner)</div>
+            <div class="user-role" style="font-size:.85rem; color:var(--text-medium)">Research Lead</div>
+          </div>
+          <div class="user-status" style="font-size:.8rem; padding:4px 8px; border-radius:4px; background:rgba(52,211,153,.1); color:var(--success-accent)">Active</div>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <script nonce="{{nonce}}">
+  // ==========================
+  // Utilities & State
+  // ==========================
+  const CONFIG = {
+    API_ENDPOINT: 'https://api.example.com/v1/completion',
+    MAX_NODES: 150,
+    COLORS: { background: 0x0a192f, node: 0x64ffda, line: 0x2a4470, highlight: 0xffffff, selected: 0xf5a742 },
+    THOUGHT_CATEGORIES: {
+      analysis: { name: 'Analysis', color: 0x64ffda, emoji: '🔍' },
+      synthesis: { name: 'Synthesis', color: 0x34d399, emoji: '⚗️' },
+      evaluation: { name: 'Evaluation', color: 0xfbbf24, emoji: '⚖️' },
+      prediction: { name: 'Prediction', color: 0xa78bfa, emoji: '🔮' },
+      creativity: { name: 'Creativity', color: 0xf472b6, emoji: '🎨' },
+      memory: { name: 'Memory', color: 0x60a5fa, emoji: '💾' },
+      planning: { name: 'Planning', color: 0x38bdf8, emoji: '📝' },
+      communication: { name: 'Communication', color: 0xfb7185, emoji: '💬' }
+    }
+  };
+
+  const state = {
+    scene: null, camera: null, renderer: null, controls: null, raycaster: null,
+    conceptSphere: null, nodeGroup: null,
+    selectedNode: null, intersectedNode: null,
+    currentModel: 'gemini', currentResearchMode: 'conceptual', currentResearchTool: 'analyze',
+    isOptimized: false, isDisposed: false,
+    responseHistory: [], currentResponseIndex: 0,
+    knowledgeGraph: { nodes: [], lines: [], nodeMap: new Map(), matrices: new Map(), clusters: [], anomalies: [] },
+    mouse: new THREE.Vector2(),
+    performance: { fps: 0, frameCount: 0, lastTime: performance.now() }
+  };
+
+  const elements = {
+    userInput: document.getElementById('userInput'), sendButton: document.getElementById('sendButton'), chatContainer: document.getElementById('chatContainer'),
+    modelButtons: document.querySelectorAll('.model-btn'), selectorButtons: document.querySelectorAll('.selector-btn'), researchToolButtons: document.querySelectorAll('.research-tool-btn'),
+    apiConfigModal: document.getElementById('apiConfigModal'), closeApiConfig: document.getElementById('closeApiConfig'), saveApiConfig: document.getElementById('saveApiConfig'),
+    apiProvider: document.getElementById('apiProvider'), apiKey: document.getElementById('apiKey'), apiToken: document.getElementById('apiToken'), apiEndpoint: document.getElementById('apiEndpoint'), apiModel: document.getElementById('apiModel'), researchMode: document.getElementById('researchMode'), matrixVisualization: document.getElementById('matrixVisualization'), collaborationMode: document.getElementById('collaborationMode'), apiErrorMessage: document.getElementById('apiErrorMessage'), apiStatusDot: document.getElementById('apiStatusDot'), apiStatusText: document.getElementById('apiStatusText'),
+    comparisonPanel: document.getElementById('comparisonPanel'), comparisonContent: document.getElementById('comparisonContent'), comparisonClose: document.getElementById('comparisonClose'),
+    exportPanel: document.getElementById('exportPanel'), exportPanelClose: document.getElementById('exportPanelClose'),
+    collaborationPanel: document.getElementById('collaborationPanel'), collaborationPanelClose: document.getElementById('collaborationPanelClose'),
+    shareSessionBtn: document.getElementById('shareSessionBtn'), inviteUserBtn: document.getElementById('inviteUserBtn'),
+    saveSessionBtn: document.getElementById('saveSessionBtn'), loadSessionBtn: document.getElementById('loadSessionBtn'), exportBtn: document.getElementById('exportBtn'), collaborateBtn: document.getElementById('collaborateBtn'), optimizeBtn: document.getElementById('optimizeBtn'), resetBtn: document.getElementById('resetBtn'),
+    canvas: document.getElementById('brain-canvas'), middlePanel: document.getElementById('middlePanel'), perfStats: document.getElementById('perfStats'), fps: document.getElementById('fps'), nodeCount: document.getElementById('nodeCount'), drawCalls: document.getElementById('drawCalls'), memoryUsage: document.getElementById('memoryUsage'), triangleCount: document.getElementById('triangleCount'), loadingOverlay: document.getElementById('loadingOverlay'), loadingProgressBar: document.getElementById('loadingProgressBar'), loadingSubtext: document.getElementById('loadingSubtext'), statusDot: document.getElementById('statusDot'), statusText: document.getElementById('statusText'), nodeTooltip: document.getElementById('nodeTooltip'), shortcutsHelp: document.getElementById('shortcutsHelp'), resynthesizeBtn: document.getElementById('resynthesizeBtn'), explainBtn: document.getElementById('explainBtn'), compareBtn: document.getElementById('compareBtn'), predictBtn: document.getElementById('predictBtn'), clusterBtn: document.getElementById('clusterBtn'), totalNodes: document.getElementById('totalNodes'), clusters: document.getElementById('clusters'), anomalies: document.getElementById('anomalies'), similarity: document.getElementById('similarity'), complexity: document.getElementById('complexity'), confidence: document.getElementById('confidence'), entropy: document.getElementById('entropy'), sparsity: document.getElementById('sparsity'), norm: document.getElementById('norm'), rank: document.getElementById('rank'), condition: document.getElementById('condition'), eigenvalues: document.getElementById('eigenvalues'), thoughtCount: document.getElementById('thoughtCount'), processingTime: document.getElementById('processingTime'), confidenceFill: document.getElementById('confidenceFill'), confidenceText: document.getElementById('confidenceText'), responseContent: document.getElementById('responseContent'), responseMeta: document.getElementById('responseMeta'), modelUsed: document.getElementById('modelUsed'), noResponseData: document.getElementById('noResponseData'), nodeControl: document.getElementById('node-control'), closeNodeControl: document.getElementById('close-node-control'), nodeId: document.getElementById('nodeId'), nodeCategory: document.getElementById('nodeCategory'), nodeWeight: document.getElementById('nodeWeight'), nodeEnabled: document.getElementById('nodeEnabled'), randomWeight: document.getElementById('randomWeight'), disableBranch: document.getElementById('disableBranchBtn'), enableBranch: document.getElementById('enableBranchBtn'), isolateBranch: document.getElementById('isolateBranchBtn'), activationMatrix: document.getElementById('activationMatrix'), weightMatrix: document.getElementById('weightMatrix')
+  };
+
+  function showStatus(text, type='ready'){ elements.statusText.textContent = text; elements.statusDot.className = `status-dot ${type}`; }
+  function showError(message){ const el = document.createElement('div'); el.className='message system-message'; el.innerHTML = `<div class="message-header">❌ Error</div><div>${message}</div>`; elements.chatContainer.appendChild(el); elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight; }
+  function appendChatMessage(content, type='user', title=null){ const div=document.createElement('div'); div.className=`message ${type}-message`; const emoji = type==='user'?'👤':type==='ai'?'🤖':'⚙️'; const header=title|| (type==='user'?'User Query': type==='ai'?'AI Response':'System Message'); div.innerHTML=`<div class="message-header">${emoji} ${header}</div><div>${content}</div>`; elements.chatContainer.appendChild(div); elements.chatContainer.scrollTop = elements.chatContainer.scrollHeight; }
+  function showLoading(show){ elements.loadingOverlay.classList.toggle('active', show); }
+  function updateLoadingProgress(percent, text){ elements.loadingProgressBar.style.width = `${percent}%`; elements.loadingSubtext.textContent = text; }
+
+  // Matrix renderer that supports {values,dimensions} OR {vector,dimensions}
+  function renderMatrix(container, matrix){ container.innerHTML=''; if(!matrix) { container.innerHTML='<div style="color:var(--text-medium); font-size:.8rem;">📊 No matrix data available</div>'; return; }
+    let values = matrix.values || matrix.vector; const dims = matrix.dimensions || (values? [1, values.length] : [0,0]); if(!values || !dims || dims.length<2){ container.innerHTML='<div style="color:var(--text-medium); font-size:.8rem;">📊 No matrix data available</div>'; return; }
+    const rows = dims[0], cols = dims[1]; const MAX=20; if(rows>MAX || cols>MAX){ container.innerHTML = `<div style="color: var(--warning-accent); font-size:.8rem;">🚫 Matrix too large to display (${rows}x${cols}). Max: ${MAX}x${MAX}.</div>`; return; }
+    const wrap=document.createElement('div'); for(let i=0;i<rows;i++){ const row=document.createElement('div'); row.className='matrix-row'; for(let j=0;j<cols;j++){ const idx=i*cols+j; const cell=document.createElement('div'); cell.className='matrix-cell'; const v = values[idx]; cell.textContent = (typeof v==='number' && isFinite(v))? v.toFixed(2) : '0.00'; row.appendChild(cell);} wrap.appendChild(row);} container.appendChild(wrap); }
+
+  // ==========================
+  // ML Pattern Analyzer (single, robust definition)
+  // ==========================
+  class MLPatternAnalyzer{
+    constructor(){ this.FALLBACK_FEATURE_VECTOR=new Array(20).fill(0); }
+    extractFeatures(thoughts){ return thoughts.map(t=>{ try{ const text=t.thought||''; const vec=new Array(20).fill(0); for(let i=0;i<Math.min(text.length,20);i++){ vec[i]=text.charCodeAt(i)/255; } return { feature_type:'text_vector', vector:vec, semantic_similarity:Math.random(), centrality_score:Math.random(), anomaly_score:Math.random(), clustering_coefficient:Math.random(), weight_matrix:{ values:Array.from({length:16},()=>Math.random()), dimensions:[4,4] } }; }catch(e){ return { feature_type:'text_vector', vector:[...this.FALLBACK_FEATURE_VECTOR], semantic_similarity:0, centrality_score:0, anomaly_score:0, clustering_coefficient:0, weight_matrix:{ values:[...this.FALLBACK_FEATURE_VECTOR].slice(0,16), dimensions:[4,4] } }; } }); }
+    analyzePatterns(thoughts){ const feats=this.extractFeatures(thoughts); const clusters=this.performClustering(feats); const anomalies=this.detectAnomalies(feats); const avgSim = feats.length? feats.reduce((s,f)=>s+(f.semantic_similarity||0),0)/feats.length : 0; return { cluster_count:clusters.length, clusters, anomaly_count:anomalies.length, anomalies, average_similarity:avgSim, complexity_score:Math.random() }; }
+    euclid(a,b){ let s=0; for(let i=0;i<a.length;i++){ const d=(a[i]||0)-(b[i]||0); s+=d*d; } return Math.sqrt(s); }
+    performClustering(features){ if(!features.length) return []; const k=Math.min(3, features.length); const centroids=features.slice(0,k).map(f=>[...f.vector]); let clusters=[]; for(let it=0; it<6; it++){ clusters=Array.from({length:k},()=>[]); features.forEach((f,idx)=>{ let best=0, bestDist=Infinity; for(let i=0;i<k;i++){ const d=(typeof math!=='undefined' && math.distance)? math.distance(f.vector, centroids[i]) : this.euclid(f.vector, centroids[i]); if(d<bestDist){ bestDist=d; best=i; } } clusters[best].push({index:idx, feature:f}); }); for(let i=0;i<k;i++){ if(clusters[i].length){ const sum=new Array(centroids[i].length).fill(0); clusters[i].forEach(({feature})=>{ feature.vector.forEach((v,j)=> sum[j]+=v ); }); centroids[i]=sum.map(v=> v/clusters[i].length ); } } }
+      return clusters.filter(c=>c.length>0); }
+    detectAnomalies(features){ if(!features.length) return []; const dim=features[0].vector.length; const means=new Array(dim).fill(0); const stds=new Array(dim).fill(0); features.forEach(f=>{ f.vector.forEach((v,i)=> means[i]+=v ); }); for(let i=0;i<dim;i++){ means[i]/=features.length; }
+      features.forEach(f=>{ f.vector.forEach((v,i)=>{ const d=v-means[i]; stds[i]+=d*d; }); }); for(let i=0;i<dim;i++){ stds[i]=Math.sqrt(stds[i]/features.length); }
+      const anomalies=[]; features.forEach((f,idx)=>{ let out=false; for(let i=0;i<dim;i++){ const s=stds[i]; const z = s>0 ? Math.abs((f.vector[i]-means[i])/s) : 0; if(z>2){ out=true; break; } } if(out){ anomalies.push({ thought_id:`thought_${idx}`, feature_index:idx, anomaly_score:f.anomaly_score, reason:'Statistical outlier detected' }); } }); return anomalies; }
+    generateClusterCharacteristics(cluster){ if(!cluster||!cluster.length) return 'No members in cluster.'; const avgSim = cluster.reduce((s,m)=>s+(m.feature?.semantic_similarity||0),0)/cluster.length; const avgCent = cluster.reduce((s,m)=>s+(m.feature?.centrality_score||0),0)/cluster.length; return `Avg Similarity: ${(avgSim*100).toFixed(1)}%, Centrality: ${(avgCent*100).toFixed(1)}%`; }
+  }
+
+  // ==========================
+  // API Client with offline fallback
+  // ==========================
+  class EnhancedScientificAIAPIClient{
+    constructor(){ this.apiKey=null; this.apiEndpoint=CONFIG.API_ENDPOINT; this.model='gemini-ultra'; }
+    configure(cfg){ this.apiKey=cfg.apiKey||null; this.apiEndpoint=cfg.endpoint||this.apiEndpoint; this.model=cfg.model||this.model; }
+    async generateCompletion(prompt, weights=[], context={}){
+      // Offline fallback so the app works without an API key
+      if(!this.apiKey){ const local = { response:`(Offline mode) Analysis of: "${prompt}". Key themes identified, clusters formed, and potential next steps suggested.`, model:this.model, synthesized_response:`${prompt.slice(0,120)}...` }; return this.processAPIResponse(local, prompt, weights, context); }
+      const body={ model:this.model, prompt, weights, context, research_mode:state.currentResearchMode, research_tool:state.currentResearchTool, max_tokens:2048, temperature:0.7 };
+      const resp = await fetch(this.apiEndpoint,{ method:'POST', headers:{ 'Content-Type':'application/json', 'Authorization':`Bearer ${this.apiKey}` }, body:JSON.stringify(body) });
+      if(!resp.ok){ const txt=await resp.text(); throw new Error(`API request failed: ${resp.status} ${resp.statusText} - ${txt}`); }
+      const data = await resp.json(); return this.processAPIResponse(data, prompt, weights, context);
+    }
+    processAPIResponse(data, prompt, weights, context){ const t0=performance.now(); const text = (data.choices?.[0]?.text?.trim()) || (data.synthesized_response?.trim()) || (data.response?.trim()) || 'The analysis reveals complex patterns that require further investigation.'; const processingTime = performance.now()-t0; const confidence = Math.min(99, Math.max(60, Math.round(70 + Math.random()*20)));
+      const researchMetrics = this.generateResearchMetrics(text); const mlAnalysis = patternAnalyzer.analyzePatterns([{ thought: prompt, weight:100, enabled:true }]); return { response:text, model:this.model, prompt, weights, context, processing_time:processingTime, confidence, research_metrics:researchMetrics, ml_analysis:mlAnalysis, thoughts:this.generateThoughts(text, weights) };
+    }
+    generateThoughts(text, weights){ const tokens = text.split(/\s+/).slice(0,20); const ts = Date.now(); const cats = Object.keys(CONFIG.THOUGHT_CATEGORIES); return tokens.map((tok,i)=>({ id:`thought_${ts}_${i}`, thought:tok, category: cats[i%cats.length], weight: (weights && weights[i] !== undefined)? weights[i] : Math.floor(Math.random()*100), enabled:true, parent: i>0? `thought_${ts}_${i-1}` : null })); }
+    generateResearchMetrics(text){ try{ const vector = text.split('').map(c=> c.charCodeAt(0)/255 ); const norm = (typeof math!=='undefined' && math.norm)? math.norm(vector) : Math.sqrt(vector.reduce((s,v)=>s+v*v,0)); const sparsity = (vector.filter(v=>v===0).length / vector.length) * 100; const sum = vector.reduce((s,v)=>s+v,0)||1; const probs = vector.map(v=> v/(sum) ); const entropy = -probs.reduce((s,p)=> s + (p>0? p*Math.log2(p):0), 0); const mean = vector.reduce((s,v)=>s+v,0)/vector.length; const eigen = mean * vector.length; const variance = vector.reduce((s,v)=> s + Math.pow(v-mean,2),0)/vector.length; const complexity = Math.sqrt(variance) * Math.log(vector.length+1); const rank = Math.min(vector.length, 10); const minNZ = vector.filter(v=>v>0).reduce((m,v)=> Math.min(m,v), Infinity); const cond = norm / (minNZ===Infinity? 1 : minNZ);
+        return { norm:isFinite(norm)?norm:0, sparsity:isFinite(sparsity)?sparsity:0, entropy:isFinite(entropy)?entropy:0, eigenvalue_estimate:isFinite(eigen)?eigen:0, complexity:isFinite(complexity)?complexity:0, rank, condition_number:isFinite(cond)?cond:0, eigenvalue_spread:isFinite(eigen*0.1)?eigen*0.1:0 };
+      }catch(e){ return { norm:0, sparsity:0, entropy:0, eigenvalue_estimate:0, complexity:0, rank:0, condition_number:0, eigenvalue_spread:0 };
+    }
+    generateAdvancedMathRepresentation(text){ try{ const vector = text.split('').map(c=> c.charCodeAt(0)/255 ); const norm = (typeof math!=='undefined' && math.norm)? math.norm(vector) : Math.sqrt(vector.reduce((s,v)=>s+v*v,0)); const sparsity=(vector.filter(v=>v===0).length/vector.length)*100; const sum=vector.reduce((s,v)=>s+v,0)||1; const probs=vector.map(v=> v/(sum) ); const entropy=-probs.reduce((s,p)=> s + (p>0? p*Math.log2(p):0),0); const mean = vector.reduce((s,v)=>s+v,0)/vector.length; const eigen = mean * vector.length; const variance = vector.reduce((s,v)=> s + Math.pow(v-mean,2),0)/vector.length; const complexity = Math.sqrt(variance) * Math.log(vector.length+1); return { values: vector, norm: isFinite(norm)?norm:0, sparsity:isFinite(sparsity)?sparsity:0, entropy:isFinite(entropy)?entropy:0, eigenvalue_estimate:isFinite(eigen)?eigen:0, complexity:isFinite(complexity)?complexity:0, dimensions:[1, vector.length] }; }catch(e){ return { values:[], norm:0, sparsity:0, entropy:0, eigenvalue_estimate:0, complexity:0, dimensions:[0,0] }; } }
+  }
+
+  const patternAnalyzer = new MLPatternAnalyzer();
+  const apiClient = new EnhancedScientificAIAPIClient();
+
+  // ==========================
+  // Three.js setup & scene
+  // ==========================
+  function setupThreeJS(){ state.scene = new THREE.Scene(); state.scene.background=new THREE.Color(CONFIG.COLORS.background); state.scene.fog = new THREE.Fog(CONFIG.COLORS.background, 50, 100);
+    const aspect = elements.middlePanel.clientWidth / elements.middlePanel.clientHeight; state.camera = new THREE.PerspectiveCamera(75, aspect, 0.1, 1000); state.camera.position.z = 50;
+    state.renderer = new THREE.WebGLRenderer({ canvas: elements.canvas, antialias:true, alpha:true }); state.renderer.setSize(elements.middlePanel.clientWidth, elements.middlePanel.clientHeight); state.renderer.setPixelRatio(window.devicePixelRatio); state.renderer.shadowMap.enabled=true; state.renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+    state.controls = new THREE.OrbitControls(state.camera, elements.canvas); state.controls.enableDamping=true; state.controls.dampingFactor=.05; state.controls.minDistance=10; state.controls.maxDistance=200;
+    state.raycaster = new THREE.Raycaster();
+    const amb = new THREE.AmbientLight(0xffffff,.5); state.scene.add(amb); const dir=new THREE.DirectionalLight(0xffffff,1); dir.position.set(5,5,5); dir.castShadow=true; state.scene.add(dir); const pt=new THREE.PointLight(0x64ffda,1,100); pt.position.set(-5,-5,-5); state.scene.add(pt);
+    const geom=new THREE.SphereGeometry(5,32,32); const mat=new THREE.MeshStandardMaterial({ color: CONFIG.COLORS.node, emissive:0x00ffff, emissiveIntensity:.2, metalness:.7, roughness:.3, transparent:true, opacity:.9 }); state.conceptSphere=new THREE.Mesh(geom,mat); state.conceptSphere.castShadow=true; state.scene.add(state.conceptSphere);
+    state.nodeGroup = new THREE.Group(); state.scene.add(state.nodeGroup);
+    const onResize=()=>{ const w=elements.middlePanel.clientWidth, h=elements.middlePanel.clientHeight; state.camera.aspect=w/h; state.camera.updateProjectionMatrix(); state.renderer.setSize(w,h); }; window.addEventListener('resize', onResize);
+    const animate=()=>{ requestAnimationFrame(animate); const now=performance.now(); state.performance.frameCount++; if(now>=state.performance.lastTime+1000){ const fps=Math.round((state.performance.frameCount*1000)/(now-state.performance.lastTime)); state.performance.fps=fps; state.performance.frameCount=0; state.performance.lastTime=now; elements.fps.textContent=fps; elements.nodeCount.textContent=state.knowledgeGraph.nodes.length; elements.drawCalls.textContent=state.renderer.info.render.calls; elements.triangleCount.textContent=state.renderer.info.render.triangles; }
+      if(state.controls) state.controls.update(); if(state.conceptSphere){ state.conceptSphere.rotation.x += 0.002; state.conceptSphere.rotation.y += 0.003; }
+      state.renderer.render(state.scene, state.camera);
+    }; animate(); }
+
+  function updateStats(){ const has = state.responseHistory.length && state.currentResponseIndex < state.responseHistory.length; if(!has){ elements.totalNodes.textContent='0'; elements.thoughtCount.textContent='0'; elements.processingTime.textContent='0ms'; elements.confidenceText.textContent='0%'; elements.confidenceFill.style.width='0%'; elements.modelUsed.textContent='None'; elements.responseContent.style.display='none'; elements.noResponseData.style.display='block'; return; }
+    const r = state.responseHistory[state.currentResponseIndex]; const n = r.thoughts?.length||0; elements.totalNodes.textContent=n; elements.thoughtCount.textContent=n; const pt = (typeof r.processing_time==='number')? Math.round(r.processing_time): r.processing_time || 0; elements.processingTime.textContent=`${pt}ms`; const conf = r.confidence||0; elements.confidenceText.textContent=`${conf}%`; elements.confidenceFill.style.width=`${conf}%`; elements.modelUsed.textContent=r.model||'Unknown'; if(r.response){ elements.responseContent.innerHTML=`<pre style="white-space:pre-wrap; word-break:break-word;">${r.response}</pre>`; elements.responseContent.style.display='block'; elements.noResponseData.style.display='none'; } else { elements.responseContent.style.display='none'; elements.noResponseData.style.display='block'; } }
+  function updateMathStats(){ const ok = state.responseHistory.length && state.currentResponseIndex<state.responseHistory.length; const m = ok? (state.responseHistory[state.currentResponseIndex].research_metrics || {}):{}; elements.entropy.textContent=(m.entropy||0).toFixed(1); elements.sparsity.textContent=((m.sparsity||0)).toFixed(0)+"%"; elements.norm.textContent=(m.norm||0).toFixed(1); elements.rank.textContent=m.rank||'0'; elements.condition.textContent = (m.condition_number===Infinity? '∞' : (m.condition_number||0).toFixed(1)); elements.eigenvalues.textContent=(m.eigenvalue_spread||0).toFixed(1); }
+  function updateMLStats(){ const ok = state.responseHistory.length && state.currentResponseIndex<state.responseHistory.length; const ml = ok? (state.responseHistory[state.currentResponseIndex].ml_analysis||{}):{}; elements.clusters.textContent=ml.cluster_count||'0'; elements.anomalies.textContent=ml.anomaly_count||'0'; const sim = ml.average_similarity? (ml.average_similarity*100):0; elements.similarity.textContent=`${sim.toFixed(1)}%`; elements.complexity.textContent=(ml.complexity_score||0).toFixed(1); }
+  function updateUIFromState(){ elements.modelButtons.forEach(b=> b.classList.toggle('active', b.dataset.model===state.currentModel)); elements.selectorButtons.forEach(b=> b.classList.toggle('active', b.dataset.mode===state.currentResearchMode)); elements.researchToolButtons.forEach(b=> b.classList.toggle('active', b.dataset.tool===state.currentResearchTool)); updateStats(); updateMathStats(); updateMLStats(); }
+
+  // ==========================
+  // Graph helpers
+  // ==========================
+  function createNode(thought, index){ const node = new THREE.Mesh( new THREE.SphereGeometry(1,16,16), new THREE.MeshStandardMaterial({ color:new THREE.Color(0x64ffda), metalness:.5, roughness:.3, transparent:true, opacity:1 }) ); const mathRep = apiClient.generateAdvancedMathRepresentation(thought.thought||''); const ml = patternAnalyzer.extractFeatures([thought])[0] || {};
+    node.userData = { id: thought.id || `node_${index}`, thought: thought.thought || 'No thought data', category: thought.category || 'analysis', weight: (thought.weight!==undefined? thought.weight : 100), enabled: thought.enabled!==false, parent: thought.parent || null, mathematical_representation: mathRep, ml_features: ml };
+    const radius = 20 + (index % 5) * 5; const theta = Math.random()*Math.PI*2; const phi = Math.acos(2*Math.random()-1); node.position.set( radius*Math.sin(phi)*Math.cos(theta), radius*Math.sin(phi)*Math.sin(theta), radius*Math.cos(phi) ); node.castShadow=true; node.receiveShadow=true; state.nodeGroup.add(node); state.knowledgeGraph.nodes.push(node); state.knowledgeGraph.nodeMap.set(node.userData.id, node); return node; }
+  function updateNodeAppearance(node, enabled){ if(!node.material) return; if(enabled){ const cat=node.userData.category||'analysis'; const cfg = CONFIG.THOUGHT_CATEGORIES[cat]; const col = cfg? cfg.color : 0x64ffda; node.material.color.setHex(col); node.material.opacity=1.0; if(node.userData.cluster_id){ node.material.color.setHex(0x34d399); } if(node.userData.ml_features && node.userData.ml_features.anomaly_score>0.7){ node.material.color.setHex(0xef4444); } } else { node.material.color.setHex(0x495670); node.material.opacity=.3; } }
+  function createConnections(thoughts){ state.knowledgeGraph.lines.forEach(l=> state.scene.remove(l)); state.knowledgeGraph.lines=[]; thoughts.forEach(t=>{ if(t.parent){ const a=state.knowledgeGraph.nodeMap.get(t.parent); const b=state.knowledgeGraph.nodeMap.get(t.id); if(a&&b){ const g=new THREE.BufferGeometry().setFromPoints([a.position,b.position]); const m=new THREE.LineBasicMaterial({ color:new THREE.Color(0x2a4470), transparent:true, opacity:.6 }); const line=new THREE.Line(g,m); state.scene.add(line); state.knowledgeGraph.lines.push(line); } } }); }
+
+  function showNodeTooltip(node, evt){ const ud=node.userData; const cat=CONFIG.THOUGHT_CATEGORIES[ud.category] || { name:'Unknown', color:0x64ffda, emoji:'❓' }; const catHex = `#${cat.color.toString(16).padStart(6,'0')}`; let html = `<div class="tooltip-header"><span class="tooltip-category" style="background:${catHex}; color:#0a192f;">${cat.emoji} ${cat.name}</span><span class="tooltip-weight">${ud.weight}% ${!ud.enabled? '(Disabled)':''}</span></div><div class="tooltip-content">${ud.thought}</div>`;
+    const mr = ud.mathematical_representation; if(mr){ html += `<div class="tooltip-math-info"><div>Norm: ${(mr.norm||0).toFixed(2)}</div><div>Sparsity: ${(mr.sparsity||0).toFixed(0)}%</div><div>Entropy: ${(mr.entropy||0).toFixed(2)}</div><div>Complexity: ${(mr.complexity||0).toFixed(2)}</div></div>`; }
+    const mf = ud.ml_features||{}; if(mf && typeof mf==='object'){ const sim = (mf.semantic_similarity||0)*100, cen=(mf.centrality_score||0)*100, ano=(mf.anomaly_score||0)*100, cc=(mf.clustering_coefficient||0)*100; html += `<div class="tooltip-math-info"><div>Similarity: ${sim.toFixed(1)}%</div><div>Centrality: ${cen.toFixed(1)}%</div><div>Anomaly: ${ano.toFixed(1)}%</div><div>Clustering: ${cc.toFixed(1)}%</div></div>`; }
+    if(ud.cluster_id){ html += `<div style="margin-top:8px; padding:4px 8px; background: var(--node-cluster); border-radius:4px; font-size:.8rem;">🎯 Cluster ${ud.cluster_id}</div>`; }
+    if(mf && mf.anomaly_score>0.7){ html += `<div style="margin-top:8px; padding:4px 8px; background: var(--node-anomaly); border-radius:4px; font-size:.8rem;">⚠️ Anomalous Pattern</div>`; }
+    elements.nodeTooltip.innerHTML = html; const rect = elements.middlePanel.getBoundingClientRect(); elements.nodeTooltip.style.left = `${Math.min(evt.clientX+10, rect.right-320)}px`; elements.nodeTooltip.style.top = `${Math.min(evt.clientY+10, rect.bottom-120)}px`; elements.nodeTooltip.classList.add('visible'); }
+  function hideNodeTooltip(){ elements.nodeTooltip.classList.remove('visible'); }
+
+  function showNodeControlPanel(node){ const ud=node.userData; elements.nodeId.textContent=ud.id; elements.nodeCategory.textContent=ud.category; elements.nodeWeight.textContent=`${ud.weight}%`; elements.nodeEnabled.textContent=ud.enabled? 'Yes':'No'; renderMatrix(elements.activationMatrix, ud.mathematical_representation); renderMatrix(elements.weightMatrix, ud.ml_features?.weight_matrix); elements.nodeControl.style.display='block'; }
+
+  function createVisualization(thoughts){ state.knowledgeGraph.nodes.forEach(n=> state.nodeGroup.remove(n)); state.knowledgeGraph.lines.forEach(l=> state.scene.remove(l)); state.knowledgeGraph.nodes=[]; state.knowledgeGraph.lines=[]; state.knowledgeGraph.nodeMap.clear(); if(!thoughts || !thoughts.length){ return; } thoughts.forEach((t,i)=> createNode(t,i)); createConnections(thoughts); }
+
+  // ==========================
+  // Actions
+  // ==========================
+  function handleUserInput(){ const prompt = elements.userInput.value.trim(); if(!prompt) return; elements.userInput.disabled=true; elements.sendButton.disabled=true; showStatus('Processing enhanced analysis...','thinking'); showLoading(true); updateLoadingProgress(20,'Tokenizing input...'); setTimeout(()=>{ updateLoadingProgress(50,'Generating cognitive pathways...'); apiClient.generateCompletion(prompt).then(data=>{ state.responseHistory.push(data); state.currentResponseIndex=state.responseHistory.length-1; createVisualization(data.thoughts); updateUIFromState(); appendChatMessage(data.response,'ai'); elements.resynthesizeBtn.disabled=false; elements.explainBtn.disabled=false; elements.compareBtn.disabled= state.responseHistory.length<2; elements.predictBtn.disabled=false; elements.clusterBtn.disabled=false; elements.exportBtn.disabled=false; elements.saveSessionBtn.disabled=false; showStatus('Analysis complete. Visualization ready.','ready'); setTimeout(()=> showLoading(false), 300); }).catch(err=>{ showError(`❌ Analysis failed: ${err.message}`); showStatus(`Error: ${err.message}`,'error'); showLoading(false); }).finally(()=>{ elements.userInput.disabled=false; elements.sendButton.disabled=false; elements.userInput.value=''; }); }, 400); }
+
+  function handleResynthesis(){ if(!state.responseHistory.length) return; const cur = state.responseHistory[state.currentResponseIndex]; const weighted = (cur.thoughts||[]).filter(t=> t.enabled!==false).map(t=> ({ id:t.id, weight:t.weight })); showStatus('Re-synthesizing with enhanced analysis...','thinking'); showLoading(true); updateLoadingProgress(30,'Adjusting cognitive weights...'); const ctx = { originalResponse: cur, weightAdjustments: weighted, resynthesisCount: state.responseHistory.length }; apiClient.generateCompletion(cur.response, weighted, ctx).then(data=>{ state.responseHistory.push(data); state.currentResponseIndex = state.responseHistory.length-1; createVisualization(data.thoughts); updateUIFromState(); appendChatMessage(data.response,'ai','🔄 Re-synthesized Response'); showStatus('Ready for enhanced analysis','ready'); }).catch(e=>{ showError('❌ Failed to re-synthesize response'); showStatus(`Error: ${e.message}`,'error'); }).finally(()=> setTimeout(()=> showLoading(false), 300)); }
+
+  function handleExplainReasoning(){ if(!state.responseHistory.length) return; const cur = state.responseHistory[state.currentResponseIndex]; const prompt = `Explain the detailed reasoning and cognitive pathways that led to the following analysis: "${cur.response}". Break down the steps, methodologies, and any mathematical or logical frameworks applied.`; showStatus('Generating detailed explanation...','processing'); showLoading(true); updateLoadingProgress(40,'Mapping cognitive architecture...'); apiClient.generateCompletion(prompt).then(d=>{ const expl = `🧠 **Detailed Reasoning Analysis:**\n${d.response}\n\n**Mathematical Framework:**\n- Matrix Rank: ${cur.research_metrics?.rank || 'N/A'}\n- Eigenvalue Spread: ${cur.research_metrics?.eigenvalue_spread?.toFixed?.(2) || 'N/A'}\n- Condition Number: ${cur.research_metrics?.condition_number?.toFixed?.(2) || 'N/A'}\n\n**ML Processing:**\n- Clusters: ${cur.ml_analysis?.cluster_count || 0}\n- Anomalies: ${cur.ml_analysis?.anomaly_count || 0}\n- Complexity Score: ${cur.ml_analysis?.complexity_score?.toFixed?.(3) || 'N/A'}`; appendChatMessage(expl,'ai','🧐 Reasoning Explanation'); showStatus('Explanation generated','ready'); }).catch(e=>{ showError('❌ Failed to generate explanation'); showStatus(`Error: ${e.message}`,'error'); }).finally(()=> setTimeout(()=> showLoading(false),300)); }
+
+  function compareResponses(){ if(state.responseHistory.length<2){ showError('Need at least 2 responses to compare'); return; } const cur = state.responseHistory[state.currentResponseIndex]; const prev = state.responseHistory[Math.max(0, state.currentResponseIndex-1)]; const diff = generateDiffReport(prev, cur); elements.comparisonContent.innerHTML = `
+    <div class="comparison-version"><h3>📋 Version ${Math.max(0,state.currentResponseIndex-1)+1}</h3><div class="comparison-version-meta">Model: ${prev.model} • Confidence: ${prev.confidence}% • Processing: ${Math.round(prev.processing_time||0)}ms • Entropy: ${(prev.research_metrics?.entropy||0).toFixed(2)} • Clusters: ${prev.ml_analysis?.cluster_count||0}</div><div class="comparison-version-text">${prev.response}</div></div>
+    <div class="comparison-version"><h3>📋 Version ${state.currentResponseIndex+1}</h3><div class="comparison-version-meta">Model: ${cur.model} • Confidence: ${cur.confidence}% • Processing: ${Math.round(cur.processing_time||0)}ms • Entropy: ${(cur.research_metrics?.entropy||0).toFixed(2)} • Clusters: ${cur.ml_analysis?.cluster_count||0}</div><div class="comparison-version-text">${cur.response}</div></div>
+    <div class="comparison-version" style="grid-column:span 2;"><h3>🔍 Differences</h3><div class="comparison-version-text">${diff}</div></div>`; elements.comparisonPanel.classList.add('active'); }
+  function generateDiffReport(oldR, newR){ const metrics=[ {n:'Confidence',o:oldR.confidence,nv:newR.confidence,u:'%'}, {n:'Processing Time',o:oldR.processing_time,nv:newR.processing_time,u:'ms'}, {n:'Entropy',o:oldR.research_metrics?.entropy,nv:newR.research_metrics?.entropy,u:''}, {n:'Sparsity',o:oldR.research_metrics?.sparsity,nv:newR.research_metrics?.sparsity,u:'%'}, {n:'Norm',o:oldR.research_metrics?.norm,nv:newR.research_metrics?.norm,u:''}, {n:'Clusters',o:oldR.ml_analysis?.cluster_count,nv:newR.ml_analysis?.cluster_count,u:''}, {n:'Anomalies',o:oldR.ml_analysis?.anomaly_count,nv:newR.ml_analysis?.anomaly_count,u:''} ].filter(m=> m.o!==undefined && m.nv!==undefined ); let html='<table style="width:100%; border-collapse:collapse; color:var(--text-light);">'; html+='<tr style="background:var(--bg-dark);"><th style="text-align:left; padding:8px; border:1px solid var(--border-color);">Metric</th><th style="text-align:right; padding:8px; border:1px solid var(--border-color);">Previous</th><th style="text-align:right; padding:8px; border:1px solid var(--border-color);">Current</th><th style="text-align:right; padding:8px; border:1px solid var(--border-color);">Change</th><th style="text-align:center; padding:8px; border:1px solid var(--border-color);">Trend</th></tr>'; metrics.forEach(m=>{ const ch=(m.nv-m.o); const cls= ch>0? 'diff-added' : ch<0? 'diff-removed' : ''; const changeText = (typeof ch==='number' && isFinite(ch))? (ch>0? `+${ch.toFixed(2)}`: ch.toFixed(2)) : '0.00'; const trend = ch>0? '📈' : ch<0? '📉' : '➖'; const oTxt = (typeof m.o==='number' && isFinite(m.o))? m.o.toFixed(2) : m.o; const nTxt = (typeof m.nv==='number' && isFinite(m.nv))? m.nv.toFixed(2) : m.nv; html+=`<tr><td style="padding:8px; border:1px solid var(--border-color); font-weight:600;">${m.n}</td><td style="text-align:right; padding:8px; border:1px solid var(--border-color);">${oTxt}${m.u}</td><td style="text-align:right; padding:8px; border:1px solid var(--border-color);">${nTxt}${m.u}</td><td style="text-align:right; padding:8px; border:1px solid var(--border-color);" class="${cls}">${changeText}${m.u}</td><td style="text-align:center; padding:8px; border:1px solid var(--border-color);">${trend}</td></tr>`; }); html+='</table>'; return html; }
+
+  function handlePredictExtensions(){ if(!state.responseHistory.length) return; const cur=state.responseHistory[state.currentResponseIndex]; const prompt='Based on the current analysis and cognitive patterns, predict the next logical extensions, implications, and research directions.'; showStatus('Generating predictive extensions...','processing'); showLoading(true); updateLoadingProgress(30,'Analyzing current patterns...'); const ctx={ baseAnalysis:cur, historicalPatterns: state.responseHistory.slice(-5), mlInsights: cur.ml_analysis }; apiClient.generateCompletion(prompt, null, ctx).then(d=>{ const msg = `🔮 **Predictive Analysis & Extensions:**\n${d.response}\n\n**Confidence (synthetic):**\n- Short-term: ${Math.round(Math.random()*20+75)}%\n- Medium-term: ${Math.round(Math.random()*15+60)}%\n- Long-term: ${Math.round(Math.random()*25+50)}%`; appendChatMessage(msg,'ai','🔮 Predictive Insights'); showStatus('Predictions generated','ready'); }).catch(e=>{ showError('❌ Failed to generate predictions'); showStatus(`Error: ${e.message}`,'error'); }).finally(()=> setTimeout(()=> showLoading(false), 300)); }
+
+  function handleClusterAnalysis(){ if(!state.responseHistory.length) return; const cur=state.responseHistory[state.currentResponseIndex]; showStatus('Performing advanced cluster analysis...','processing'); showLoading(true); updateLoadingProgress(25,'Extracting high-dimensional features...'); setTimeout(()=> updateLoadingProgress(50,'Computing similarity matrix...'), 300); setTimeout(()=> updateLoadingProgress(75,'Identifying emergent clusters...'), 600); const ml = patternAnalyzer.analyzePatterns(cur.thoughts||[]); state.knowledgeGraph.clusters = ml.clusters||[]; state.knowledgeGraph.anomalies = ml.anomalies||[]; let report = `🎯 **Enhanced Cluster Analysis Report**\n\n**Overview:**\n- Total Clusters Identified: ${ml.cluster_count||0}\n- Anomalous Patterns Detected: ${ml.anomaly_count||0}\n- Average Inter-Cluster Similarity: ${((ml.average_similarity||0)*100).toFixed(1)}%\n\n`;
+    if(ml.clusters && ml.clusters.length){ report += `**Cluster Breakdown:**\n`; ml.clusters.forEach((c,i)=>{ report+=`- **Cluster ${i+1}** (${c.length} members)\n  - Characteristics: ${patternAnalyzer.generateClusterCharacteristics(c)}\n`; }); } else { report += `**Cluster Breakdown:**\nNo significant clusters were identified.\n`; }
+    if(ml.anomalies && ml.anomalies.length){ report += `\n**Anomaly Log:**\n`; ml.anomalies.forEach((a,i)=>{ report += `- **Anomaly ${i+1}** (Score: ${(a.anomaly_score*100).toFixed(1)}%) - ${a.reason}\n`; }); } else { report += `\n**Anomaly Log:**\nNo significant anomalies were detected.\n`; }
+    report += `\n**System Metrics:**\n- Cognitive Load: ${(Math.min(100,(cur.thoughts?.length||1)*2)).toFixed(1)}%\n- Processing Depth: ${(ml.complexity_score||0).toFixed(2)}\n- Knowledge Coherence: ${(((cur.thoughts?.filter(t=>t.enabled!==false).length||0)/(cur.thoughts?.length||1))*100).toFixed(1)}%`;
+    setTimeout(()=>{ appendChatMessage(report,'ai','🎯 Cluster Analysis'); updateLoadingProgress(100,'Cluster analysis complete!'); setTimeout(()=> showLoading(false), 200); showStatus('Ready for enhanced analysis','ready'); }, 700);
+  }
+
+  function optimizePerformance(){ state.isOptimized=!state.isOptimized; if(state.isOptimized){ state.renderer.shadowMap.enabled=false; state.scene.fog=null; state.knowledgeGraph.nodes.forEach(n=>{ if(n.material){ n.material.metalness=0; n.material.roughness=1; }}); elements.optimizeBtn.innerHTML='🐢 Unoptimize'; appendChatMessage('⚡ Performance optimizations enabled. Visual quality may be reduced.','system'); } else { state.renderer.shadowMap.enabled=true; state.scene.fog=new THREE.Fog(CONFIG.COLORS.background,50,100); state.knowledgeGraph.nodes.forEach(n=>{ if(n.material){ n.material.metalness=.5; n.material.roughness=.3; }}); elements.optimizeBtn.innerHTML='⚡ Optimize Performance'; appendChatMessage('🐢 Performance optimizations disabled. Visual quality restored.','system'); } showStatus(`Performance mode: ${state.isOptimized?'Optimized':'Standard'}`,'ready'); }
+
+  function resetVisualization(){ state.knowledgeGraph.nodes.forEach(n=> state.nodeGroup.remove(n)); state.knowledgeGraph.lines.forEach(l=> state.scene.remove(l)); state.knowledgeGraph.nodes=[]; state.knowledgeGraph.lines=[]; state.knowledgeGraph.nodeMap.clear(); state.knowledgeGraph.clusters=[]; state.knowledgeGraph.anomalies=[]; state.responseHistory=[]; state.currentResponseIndex=0; updateUIFromState(); elements.resynthesizeBtn.disabled=true; elements.explainBtn.disabled=true; elements.compareBtn.disabled=true; elements.predictBtn.disabled=true; elements.clusterBtn.disabled=true; elements.exportBtn.disabled=true; elements.saveSessionBtn.disabled=true; appendChatMessage('🌀 Visualization and history have been reset.','system'); showStatus('Visualization reset complete','ready'); }
+
+  // ==========================
+  // Export manager
+  // ==========================
+  class EnhancedExportManager{ download(content, filename, mime){ const blob=new Blob([content],{type:mime}); const url=URL.createObjectURL(blob); const a=document.createElement('a'); a.href=url; a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url); }
+    createJSON(){ return { export_timestamp:new Date().toISOString(), configuration:{ model:state.currentModel, research_mode:state.currentResearchMode, research_tool:state.currentResearchTool }, thoughts: state.knowledgeGraph.nodes.map(n=>({ id:n.userData.id, thought:n.userData.thought, category:n.userData.category, weight:n.userData.weight, enabled:n.userData.enabled, parent:n.userData.parent, position:n.position.toArray(), mathematical_representation:n.userData.mathematical_representation, ml_features:n.userData.ml_features })), matrices:Array.from(state.knowledgeGraph.matrices.entries()), response_history: state.responseHistory, performance_metrics:{} }; }
+    createCSV(){ const headers=['ID','Thought','Category','Weight','Enabled','Parent','Position_X','Position_Y','Position_Z','Math_Norm','Math_Sparsity','Math_Entropy']; const rows=state.knowledgeGraph.nodes.map(n=>{ const u=n.userData, p=n.position, m=u.mathematical_representation||{}; return [u.id, `"${(u.thought||'').replace(/"/g,'""')}"`, u.category||'', u.weight||100, u.enabled?'TRUE':'FALSE', u.parent||'', p.x.toFixed(3), p.y.toFixed(3), p.z.toFixed(3), (m.norm||0).toFixed(3), (m.sparsity||0).toFixed(1), (m.entropy||0).toFixed(3) ].join(','); }); return [headers.join(','), ...rows].join('\n'); }
+    createLaTeX(){ const cur=state.responseHistory[state.currentResponseIndex]; if(!cur) return '% No data'; return `\\documentclass[11pt]{article}
+\\usepackage[utf8]{inputenc}
+\\usepackage[a4paper, margin=1in]{geometry}
+\\usepackage{amsmath,amsfonts}
+\\title{AI Brain Analysis Report}
+\\date{\\today}
+\\begin{document}
+\\maketitle
+\\section{Executive Summary}
+Analysis prompt: \\textbf{${cur.prompt}}.\\section{Core Analysis}
+${cur.response}
+\\section{Mathematical Metrics}
+Norm: ${(cur.research_metrics?.norm||0).toFixed(3)}; Entropy: ${(cur.research_metrics?.entropy||0).toFixed(3)}; Rank: ${cur.research_metrics?.rank||'N/A'}\\section{ML Insights}
+Clusters: ${cur.ml_analysis?.cluster_count||0}; Anomalies: ${cur.ml_analysis?.anomaly_count||0}\\end{document}`; }
+    createReport(){ const cur=state.responseHistory[state.currentResponseIndex]; if(!cur) return '# AI Brain Analysis Report\n\nNo data.'; return `# AI Brain Analysis Report\n\n## Prompt\n${cur.prompt}\n\n## Core Analysis\n${cur.response}\n\n## Metrics\n- Norm: ${(cur.research_metrics?.norm||0).toFixed(3)}\n- Entropy: ${(cur.research_metrics?.entropy||0).toFixed(2)}\n- Rank: ${cur.research_metrics?.rank||'N/A'}\n`; }
+    export(format){ showStatus(`Exporting data as ${format.toUpperCase()}...`,'processing'); showLoading(true); try{ let content='', filename='', mime='text/plain'; if(format==='json'){ content=JSON.stringify(this.createJSON(),null,2); filename=`ai-brain-session-${Date.now()}.json`; mime='application/json'; } else if(format==='csv'){ content=this.createCSV(); filename=`ai-brain-analysis-${Date.now()}.csv`; mime='text/csv'; } else if(format==='latex'){ content=this.createLaTeX(); filename=`ai-research-report-${Date.now()}.tex`; mime='application/x-latex'; } else if(format==='pdf'){ content=this.createReport(); filename=`ai-research-report-${Date.now()}.txt`; mime='text/plain'; } this.download(content, filename, mime); appendChatMessage(`📤 Data exported successfully as ${format.toUpperCase()}!`,'system'); showStatus(`${format.toUpperCase()} export completed`,'ready'); }catch(e){ showError(`❌ Failed to export ${e.message}`); showStatus(`Export failed: ${e.message}`,'error'); } finally{ setTimeout(()=> showLoading(false), 300); } }
+  }
+  const exportManager = new EnhancedExportManager();
+
+  // ==========================
+  // Session save/load
+  // ==========================
+  function saveSession(){ const data={ timestamp:new Date().toISOString(), configuration:{ model:state.currentModel, research_mode:state.currentResearchMode, research_tool:state.currentResearchTool }, knowledgeGraph:{ nodes: state.knowledgeGraph.nodes.map(n=>({ userData:n.userData, position:n.position.toArray() })), matrices:Array.from(state.knowledgeGraph.matrices.entries()) }, responseHistory: state.responseHistory, currentResponseIndex: state.currentResponseIndex }; try{ localStorage.setItem('aiBrainSession', JSON.stringify(data)); appendChatMessage('💾 Session saved successfully to local storage!','system'); showStatus('Session saved','ready'); }catch(e){ showError('❌ Failed to save session. Local storage might be full or unavailable.'); showStatus('Save failed','error'); } }
+  function loadSession(){ try{ const data=JSON.parse(localStorage.getItem('aiBrainSession')); if(!data){ showError('No saved session found.'); return; } state.currentModel=data.configuration.model; state.currentResearchMode=data.configuration.research_mode; state.currentResearchTool=data.configuration.research_tool; state.responseHistory=data.responseHistory||[]; state.currentResponseIndex=data.currentResponseIndex||0; state.knowledgeGraph.nodes=[]; state.knowledgeGraph.lines=[]; state.knowledgeGraph.nodeMap.clear(); state.knowledgeGraph.matrices=new Map(data.knowledgeGraph.matrices||[]);
+      data.knowledgeGraph.nodes.forEach(nd=>{ const node=new THREE.Mesh(new THREE.SphereGeometry(1,16,16), new THREE.MeshStandardMaterial({ color:new THREE.Color(0x64ffda), metalness:.5, roughness:.3 })); node.userData=nd.userData; node.position.fromArray(nd.position); state.nodeGroup.add(node); state.knowledgeGraph.nodes.push(node); state.knowledgeGraph.nodeMap.set(node.userData.id, node); }); if(state.responseHistory.length){ createConnections(state.responseHistory[state.currentResponseIndex].thoughts); } updateUIFromState(); appendChatMessage('Enhanced research session loaded successfully! 🚀','system'); }catch(e){ showError(`Failed to load session: ${e.message}`); }
+  }
+
+  // ==========================
+  // API Config (single definition)
+  // ==========================
+  function openAPIConfig(){ elements.apiConfigModal.classList.add('active'); }
+  function closeAPIConfigModal(){ elements.apiConfigModal.classList.remove('active'); elements.apiErrorMessage.classList.remove('show'); }
+  function saveAPIConfig(){ const cfg = { provider: elements.apiProvider.value, apiKey: elements.apiKey.value, apiToken: elements.apiToken.value, endpoint: elements.apiEndpoint.value, model: elements.apiModel.value, researchMode: elements.researchMode.value, matrixVisualization: elements.matrixVisualization.value, collaborationMode: elements.collaborationMode.value, configured:true };
+    if(!cfg.apiKey){ // allow empty (offline) but mark status
+      appendChatMessage('⚠️ No API key provided — running in offline demo mode.','system'); elements.apiStatusText.textContent='API: Offline mode'; elements.apiStatusDot.classList.add('connected'); apiClient.configure(cfg); elements.apiConfigModal.classList.remove('active'); elements.exportBtn.disabled=false; elements.saveSessionBtn.disabled=false; return; }
+    try{ localStorage.setItem('aiAPIConfig', JSON.stringify(cfg)); }catch(e){ appendChatMessage('⚠️ API config saved for this session only (localStorage unavailable).','system'); }
+    apiClient.configure(cfg); elements.apiStatusDot.classList.add('connected'); elements.apiStatusText.textContent = `Connected: ${cfg.provider}`; elements.apiConfigModal.classList.remove('active'); appendChatMessage(`🔐 API configured successfully with ${cfg.provider}!`,'system'); elements.saveSessionBtn.disabled=false; elements.exportBtn.disabled=false; }
+
+  // ==========================
+  // Event wiring (single DOMContentLoaded)
+  // ==========================
+  document.addEventListener('DOMContentLoaded', ()=>{
+    setupThreeJS(); updateUIFromState();
+    // Load saved API config
+    try{ const saved=localStorage.getItem('aiAPIConfig'); if(saved){ const cfg=JSON.parse(saved); if(cfg){ apiClient.configure(cfg); if(cfg.configured || cfg.apiKey){ elements.apiStatusDot.classList.add('connected'); elements.apiStatusText.textContent = cfg.apiKey? `Connected: ${cfg.provider}` : 'API: Offline mode'; } } } }catch(e){ /* ignore */ }
+
+    // UI events
+    elements.sendButton.addEventListener('click', handleUserInput);
+    elements.userInput.addEventListener('keypress', e=>{ if(e.key==='Enter') handleUserInput(); });
+    elements.modelButtons.forEach(btn=> btn.addEventListener('click', ()=>{ state.currentModel=btn.dataset.model; updateUIFromState(); }));
+    elements.selectorButtons.forEach(btn=> btn.addEventListener('click', ()=>{ state.currentResearchMode=btn.dataset.mode; updateUIFromState(); appendChatMessage(`🔬 Research mode set to **${btn.textContent.trim()}**`,'system'); }));
+    elements.researchToolButtons.forEach(btn=> btn.addEventListener('click', ()=>{ state.currentResearchTool=btn.dataset.tool; updateUIFromState(); appendChatMessage(`🛠️ Research tool set to **${btn.textContent.trim()}**`,'system'); }));
+    elements.resynthesizeBtn.addEventListener('click', handleResynthesis);
+    elements.explainBtn.addEventListener('click', handleExplainReasoning);
+    elements.compareBtn.addEventListener('click', compareResponses);
+    elements.predictBtn.addEventListener('click', handlePredictExtensions);
+    elements.clusterBtn.addEventListener('click', handleClusterAnalysis);
+    document.getElementById('apiConfigBtn').addEventListener('click', openAPIConfig);
+    elements.closeApiConfig.addEventListener('click', closeAPIConfigModal);
+    elements.saveApiConfig.addEventListener('click', saveAPIConfig);
+    elements.saveSessionBtn.addEventListener('click', saveSession);
+    elements.loadSessionBtn.addEventListener('click', loadSession);
+    elements.exportBtn.addEventListener('click', ()=>{ document.getElementById('exportPanel').classList.add('active'); });
+    elements.exportPanelClose.addEventListener('click', ()=>{ document.getElementById('exportPanel').classList.remove('active'); });
+    document.querySelectorAll('.export-card').forEach(card=> card.addEventListener('click', ()=>{ exportManager.export(card.dataset.format); document.getElementById('exportPanel').classList.remove('active'); }));
+    elements.collaborateBtn.addEventListener('click', ()=>{ document.getElementById('collaborationPanel').classList.add('active'); });
+    elements.collaborationPanelClose.addEventListener('click', ()=>{ document.getElementById('collaborationPanel').classList.remove('active'); });
+    elements.optimizeBtn.addEventListener('click', optimizePerformance);
+    elements.resetBtn.addEventListener('click', resetVisualization);
+    elements.comparisonClose.addEventListener('click', ()=> elements.comparisonPanel.classList.remove('active'));
+    elements.closeNodeControl.addEventListener('click', ()=>{ elements.nodeControl.style.display='none'; if(state.selectedNode){ updateNodeAppearance(state.selectedNode, state.selectedNode.userData.enabled); state.selectedNode=null; } });
+    elements.canvas.addEventListener('mousemove', e=>{ const rect=elements.middlePanel.getBoundingClientRect(); state.mouse.x=((e.clientX-rect.left)/rect.width)*2-1; state.mouse.y=-((e.clientY-rect.top)/rect.height)*2+1; state.raycaster.setFromCamera(state.mouse, state.camera); const ints = state.raycaster.intersectObjects(state.knowledgeGraph.nodes); if(ints.length>0){ const n=ints[0].object; if(state.intersectedNode!==n){ if(state.intersectedNode && state.intersectedNode!==state.selectedNode){ updateNodeAppearance(state.intersectedNode, state.intersectedNode.userData.enabled); } state.intersectedNode=n; if(n!==state.selectedNode){ n.material.color.setHex(0xffffff); } showNodeTooltip(n,e); } } else { if(state.intersectedNode && state.intersectedNode!==state.selectedNode){ updateNodeAppearance(state.intersectedNode, state.intersectedNode.userData.enabled); } state.intersectedNode=null; hideNodeTooltip(); } });
+    elements.canvas.addEventListener('click', e=>{ state.raycaster.setFromCamera(state.mouse, state.camera); const ints = state.raycaster.intersectObjects(state.knowledgeGraph.nodes); if(ints.length>0){ const node=ints[0].object; if(state.selectedNode){ updateNodeAppearance(state.selectedNode, state.selectedNode.userData.enabled); } state.selectedNode=node; node.material.color.setHex(0xf5a742); showNodeControlPanel(node); } else { if(state.selectedNode){ updateNodeAppearance(state.selectedNode, state.selectedNode.userData.enabled); state.selectedNode=null; } elements.nodeControl.style.display='none'; } });
+
+    showStatus('System initialized. Ready for enhanced analysis.','ready'); appendChatMessage('Welcome to the Enhanced AI Brain Visualizer Pro - Research Edition! 🚀\n\nEnter a complex query to begin multi-dimensional analysis.','system');
+  });
+  </script>
+</body>
+</html>
