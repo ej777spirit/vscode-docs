@@ -40,7 +40,7 @@ gulp.task('build-dist', done => {
   }
 
   // Copy over MD/asset files
-  $.mkdir('vscode-website/vscode-docs')
+  $.mkdir('-p', 'vscode-website/vscode-docs')
   $.cp('-R', ['../blogs', '../docs', '../images', '../release-notes', '../remote-release-notes', '../learn', '../build', '../api'], 'vscode-website/vscode-docs')
 
   // Go to vscode-website
@@ -50,13 +50,13 @@ gulp.task('build-dist', done => {
   const setup = $.exec(`scripts/setup.sh ${GITHUB_TOKEN} ${BRANCH}`)
   if (setup.code !== 0) {
     console.log('Failed to setup')
-    done(setup.stderr)
+    return done(setup.stderr)
   }
   // Run build to sync changes to vscode-website-dist
   const build = $.exec(`scripts/build.sh ${BRANCH}`)
   if (build.code !== 0) {
     console.log('Failed to build')
-    done(build.stderr)
+    return done(build.stderr)
   }
 
   done()
