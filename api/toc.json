@@ -74,7 +74,6 @@
       ["Snippet Guide", "/api/language-extensions/snippet-guide"],
       ["Language Configuration Guide", "/api/language-extensions/language-configuration-guide"],
       ["Programmatic Language Features", "/api/language-extensions/programmatic-language-features"],
-      // ["Smart Editing Guide", "/api/language-extensions/smart-editing-guide"],
       ["Language Server Extension Guide", "/api/language-extensions/language-server-extension-guide"],
       ["Embedded Languages", "/api/language-extensions/embedded-languages"]
     ]
@@ -87,7 +86,6 @@
       ["Publishing Extensions", "/api/working-with-extensions/publishing-extension"],
       ["Bundling Extensions", "/api/working-with-extensions/bundling-extension"],
       ["Continuous Integration", "/api/working-with-extensions/continuous-integration"]
-      // ["Profiling Extension", "/api/advanced-topics/profiling-extension"],
     ]
   },
   {
@@ -96,14 +94,9 @@
     "topics": [
       ["Extension Host", "/api/advanced-topics/extension-host"],
       ["Remote Development and Codespaces", "/api/advanced-topics/remote-extensions"],
-      // ["Extension Dependencies", "/api/advanced-topics/extension-dependencies"],
       ["Using Proposed API", "/api/advanced-topics/using-proposed-api"],
       ["Migrate from TSLint to ESLint", "/api/advanced-topics/tslint-eslint-migration"],
       ["Python Extension Template", "/api/advanced-topics/python-extension-template"]
-      // ["Exposing API", "/api/advanced-topics/exposing-api"],
-      // ["Native Modules", "/api/advanced-topics/native-modules"],
-      // ["Web Assembly", "/api/advanced-topics/web-assembly"],
-      // ["Internationalization", "/api/advanced-topics/internationalization"]
     ]
   },
   {
