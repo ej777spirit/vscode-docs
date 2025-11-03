@@ -1,4 +1,4 @@
-﻿<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
         <loc>https://code.visualstudio.com/</loc>
@@ -319,7 +319,7 @@
         <loc>https://code.visualstudio.com/docs/editor/accessibility</loc>
         <changefreq>weekly</changefreq>
         <priority>0.8</priority>
-    </url>>
+    </url>
     <url>
         <loc>https://code.visualstudio.com/docs/editor/whyvscode</loc>
         <changefreq>weekly</changefreq>
